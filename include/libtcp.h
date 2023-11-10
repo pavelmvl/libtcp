@@ -10,6 +10,8 @@
 #include <stdbool.h>
 
 #include <pthread.h>
+#include <semaphore.h>
+#include <stdatomic.h>
 
 #ifndef _LIBTCP_LIBTCP_H_
 #define _LIBTCP_LIBTCP_H_
@@ -17,10 +19,12 @@
 struct tcpServer {
   struct sockaddr_in addr;
   int serverSocketFd;
+  unsigned int clientCount;
   pthread_mutex_t mutex;
   void *buffer;
   size_t bufferSize;
-  bool sent;
+  int sentIdx;               // round index of buffer, use for detect that buffer sent
+  unsigned int sent;
   int (*UpdateBuffer)(struct tcpServer*, void *, size_t);
 };
 
