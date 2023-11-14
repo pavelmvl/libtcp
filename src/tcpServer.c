@@ -39,7 +39,7 @@ static void* threadTcpServerWorker(void *arg) {
         size = send(clientSocketFd, s->buffer, s->bufferSize, sendFlag);
         // size = write(clientSocketFd, s->buffer, s->bufferSize);
         if (size != s->bufferSize) {
-          fprintf(stderr, "thread %d incorrect data sent: %d, should be %d\n",
+          fprintf(stderr, "thread %d incorrect data sent: %ld, should be %ld\n",
             clientSocketFd,
             size,
             s->bufferSize
@@ -87,11 +87,11 @@ static void* threadTcpServerStart(void *arg) {
       (void*)NewWorkerArg(s, clientSocketFd, &clientAddress)
     );
     if (pthread_detach(workerPid) != 0) {
-      fprintf(stderr, "pthread_detach %d error\n", workerPid);
+      fprintf(stderr, "pthread_detach %ld error\n", workerPid);
     }
     if (err == 0) {
     } else {
-      fprintf(stderr, "threadTcpServerStart: pthread_create() return error: %s\n", err);
+      fprintf(stderr, "threadTcpServerStart: pthread_create() return error: %d\n", err);
     }
   }
   fprintf(stderr, "tcpServer exit");
@@ -99,7 +99,7 @@ static void* threadTcpServerStart(void *arg) {
 }
 
 void tcpServerExit(int status, void *arg) {
-  printf("exit status %s\n", status);
+  printf("exit status %d\n", status);
 }
 
 int InitTcpServer(pthread_t *pid, struct tcpServer *s, uint32_t host, uint16_t port, int backlog) {
