@@ -10,8 +10,6 @@
 #include <stdbool.h>
 
 #include <pthread.h>
-#include <semaphore.h>
-#include <stdatomic.h>
 
 #ifndef _LIBTCP_LIBTCP_H_
 #define _LIBTCP_LIBTCP_H_
@@ -25,6 +23,7 @@ struct tcpServer {
   size_t bufferSize;
   int sentIdx;               // round index of buffer, use for detect that buffer sent
   unsigned int sent;
+  bool stop;
   int (*UpdateBuffer)(struct tcpServer*, void *, size_t);
 };
 
