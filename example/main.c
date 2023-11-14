@@ -19,12 +19,13 @@ int main(void) {
   uint32_t message[1536000];
   message[0] = 0x00010002;
   pthread_t tcpServerPid;
-  InitTcpServer(&tcpServerPid, tcpServerPtr, INADDR_LOOPBACK, 9999, 5);
-  printf("server:    ");
-  print_sockaddr_in(&tcpServerPtr->addr);
+  in_addr_t host = INADDR_ANY; // INADDR_LOOPBACK // inet_network("192.168.100.2")
+  InitTcpServer(&tcpServerPid, tcpServerPtr, host, 9999, 50);
+  printf("server:    "); print_sockaddr_in(&tcpServerPtr->addr);
+  struct timespec us40 = {.tv_sec=0, .tv_nsec=40000000};
   while(true) {
     tcpServerPtr->UpdateBuffer(tcpServerPtr, message, sizeof(message));
-    usleep(2500L);
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &us40, NULL);
   }
   void *retval = NULL;
   pthread_join(tcpServerPid, retval);

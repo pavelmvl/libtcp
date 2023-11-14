@@ -3,5 +3,9 @@
 run: tcp
 	./tcp
 
-tcp: main.c ../src/print_sockaddr_in.c ../src/tcpServer.c ../src/tcpServer_UpdateBuffer.c
-	gcc -I../include -lpthread -o tcp $^
+tcp: main.c $(wildcard ../src/*.c)
+	gcc -g -fPIC -I../include -pthread -o tcp $^
+
+.PHONY: clean
+clean:
+	${RM} tcp
