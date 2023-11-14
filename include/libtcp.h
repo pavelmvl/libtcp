@@ -31,6 +31,7 @@ struct tcpServer {
 int UpdateBuffer(struct tcpServer *s, void *newBuffer, size_t newBufferSize);
 
 void print_sockaddr_in(struct sockaddr_in *addr);
+void fprint_sockaddr_in(FILE *f, struct sockaddr_in *addr);
 
 static void* threadTcpServerStart(void *arg);
 
