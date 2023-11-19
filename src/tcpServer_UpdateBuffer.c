@@ -1,7 +1,7 @@
 
 #include "libtcp.h"
 
-int UpdateBuffer(struct tcpServer *s, void *newBuffer, size_t newBufferSize) {
+int UpdateBuffer(struct TcpServer *s, void *newBuffer, size_t newBufferSize) {
   static struct timespec prev = {.tv_sec = 0, .tv_nsec = 0};
   int sleepCount = 0;
   int usleepValue = 100;
@@ -17,16 +17,14 @@ int UpdateBuffer(struct tcpServer *s, void *newBuffer, size_t newBufferSize) {
     prev.tv_sec = now.tv_sec;
     prev.tv_nsec = now.tv_nsec;
   }
-    fprintf(
-      stderr,
-      "UpdateBuffer idx: %2d, sent: %2d, clientCount: %2d, waitFor: %9d, diff: %011ld\n",
+    fprintf(stderr,
+      "UpdateBuffer idx: %2d, sent: %2d, clientCount: %2d, waitFor: %9d, diff: %011lld\n",
       s->sentIdx,
       s->sent,
       s->clientCount,
       sleepCount * usleepValue,
-      diff
+      (long long)diff
     );
-  //}
   pthread_mutex_lock(&s->mutex);
   s->sentIdx = (s->sentIdx + 1) % 16;
   s->buffer = newBuffer;

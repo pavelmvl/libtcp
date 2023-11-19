@@ -2,12 +2,12 @@
 #include "libtcp.h"
 
 struct workerArg {
-  struct tcpServer *s;
+  struct TcpServer *s;
   int clientSocketFd;
   struct sockaddr_in clientAddress;
 };
 
-struct workerArg* NewWorkerArg(struct tcpServer *s, int clientSocketFd, struct sockaddr_in *clientAddress) {
+struct workerArg* NewWorkerArg(struct TcpServer *s, int clientSocketFd, struct sockaddr_in *clientAddress) {
   struct workerArg* w = (struct workerArg*)malloc(sizeof(struct workerArg));
   w->s = s;
   w->clientSocketFd = clientSocketFd;
@@ -17,7 +17,7 @@ struct workerArg* NewWorkerArg(struct tcpServer *s, int clientSocketFd, struct s
 
 static void* threadTcpServerWorker(void *arg) {
   struct workerArg *w = (struct workerArg *)arg;
-  struct tcpServer *s = w->s;
+  struct TcpServer *s = w->s;
   struct sockaddr_in *clientAddress = &w->clientAddress;
   int clientSocketFd = w->clientSocketFd;
   //int quickackValue = 1;
@@ -39,7 +39,7 @@ static void* threadTcpServerWorker(void *arg) {
         size = send(clientSocketFd, s->buffer, s->bufferSize, sendFlag);
         // size = write(clientSocketFd, s->buffer, s->bufferSize);
         if (size != s->bufferSize) {
-          fprintf(stderr, "thread %d incorrect data sent: %ld, should be %ld\n",
+          fprintf(stderr, "thread %d incorrect data sent: %zd, should be %zd\n",
             clientSocketFd,
             size,
             s->bufferSize
@@ -66,8 +66,9 @@ static void* threadTcpServerWorker(void *arg) {
   return NULL;
 }
 
-static void* threadTcpServerStart(void *arg) {
-  struct tcpServer *s = arg;
+void* threadTcpServerStart(void *arg) {
+  struct TcpServer *s = arg;
+  fprintf(stderr, "server %d thread: ", getpid()); print_sockaddr_in(&s->addr);
   struct sockaddr_in clientAddress;
   socklen_t clientAddressLen = sizeof(clientAddress);
   struct sockaddr *accept_addr = (struct sockaddr *)&clientAddress;
@@ -94,7 +95,7 @@ static void* threadTcpServerStart(void *arg) {
       fprintf(stderr, "threadTcpServerStart: pthread_create() return error: %d\n", err);
     }
   }
-  fprintf(stderr, "tcpServer exit");
+  fprintf(stderr, "TcpServer exit");
   return NULL;
 }
 
@@ -102,7 +103,7 @@ void tcpServerExit(int status, void *arg) {
   printf("exit status %d\n", status);
 }
 
-int InitTcpServer(pthread_t *pid, struct tcpServer *s, uint32_t host, uint16_t port, int backlog) {
+int InitTcpServer(pthread_t *pid, struct TcpServer *s, uint32_t host, uint16_t port, int backlog, TcpServerStart serverStart) {
   s->UpdateBuffer = &UpdateBuffer;
   s->sentIdx = 0;
   s->clientCount = 0;
@@ -113,43 +114,38 @@ int InitTcpServer(pthread_t *pid, struct tcpServer *s, uint32_t host, uint16_t p
   if (s->serverSocketFd < 0) {
     return 1;
   }
-  int reuseAddrValue = 1;
-  if (setsockopt(s->serverSocketFd, SOL_SOCKET, SO_REUSEADDR, &reuseAddrValue, sizeof(reuseAddrValue)) < 0) {
-    fprintf(stderr, "setsockopt SO_REUSEADDR failure\n");
-  }
-  //int corkValue = 1;
-  //if (setsockopt(s->serverSocketFd, IPPROTO_TCP, TCP_CORK, &corkValue, sizeof(corkValue)) < 0) {
-  //  fprintf(stderr, "setsockopt TCP_CORK failure\n");
-  //}
-  int nodelayValue = 1;
-  if (setsockopt(s->serverSocketFd, IPPROTO_TCP, TCP_NODELAY, &nodelayValue, sizeof(nodelayValue)) < 0) {
-    fprintf(stderr, "setsockopt TCP_NODELAY failure\n");
-  }
-  //int quickackValue = 1;
-  //if (setsockopt(s->serverSocketFd, IPPROTO_TCP, TCP_QUICKACK, &quickackValue, sizeof(quickackValue)) < 0) {
-  //  fprintf(stderr, "setsockopt TCP_QUICKACK failure\n");
-  //}
-//  int flags = fcntl(s->serverSocketFd, F_GETFL, 0);
-//  if (flags == -1) {
-//    fprintf(stderr, "fcntl get socket flags error\n");
-//  } else {
-//    if (fcntl(s->serverSocketFd, F_SETFL, flags | O_NONBLOCK) < 0) {
-//      fprintf(stderr, "fcntl set socket flag NONBLOCK error\n");
-//    }
-//  }
-  //int sndbufValue = 1024*1024; // default 208*1024, max 1024*1024
-  //if (setsockopt(s->serverSocketFd, SOL_SOCKET, SO_SNDBUF, &sndbufValue, sizeof(sndbufValue)) < 0) {
-  //  fprintf(stderr, "setsockopt SO_SNDBUF set failure\n");
-  //}
+  SetTcpServerSocketReuseAddr(s, 1);
   struct sockaddr *bind_addr = (struct sockaddr *)&s->addr;
   if (bind(s->serverSocketFd, bind_addr, sizeof(struct sockaddr_in)) < 0) {
+    fprintf(stderr, "(%s:%d): bind error\n", __FILE__, __LINE__);
     return 2;
   }
   if (listen(s->serverSocketFd, backlog) < 0) {
+    fprintf(stderr, "(%s:%d): listen error\n", __FILE__, __LINE__);
     return 3;
   }
   s->stop = false;
-  int err = pthread_create(pid, NULL, &threadTcpServerStart, (void *)s);
-  on_exit(&tcpServerExit, NULL);
+  int err = pthread_create(pid, NULL, serverStart, (void *)s);
+  fprintf(stderr, "pthread create err: %d, pid: %lu\n", err, *pid);
   return err;
+}
+
+int SetTcpServerSocketReuseAddr(struct TcpServer *s, int value) {
+  value = (value != 0)? 1: 0;
+  return setsockopt(s->serverSocketFd, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value));
+}
+
+int SetTcpServerSocketCork(struct TcpServer *s, int value) {
+  value = (value != 0)? 1: 0;
+  return setsockopt(s->serverSocketFd, IPPROTO_TCP, TCP_CORK, &value, sizeof(value));
+}
+
+int SetTcpServerSocketNodelay(struct TcpServer *s, int value){
+  value = (value != 0)? 1: 0;
+  return setsockopt(s->serverSocketFd, IPPROTO_TCP, TCP_NODELAY, &value, sizeof(value));
+}
+
+int SetTcpServerSocketQuickAck(struct TcpServer *s, int value){
+  value = (value != 0)? 1: 0;
+  return setsockopt(s->serverSocketFd, IPPROTO_TCP, TCP_QUICKACK, &value, sizeof(value));
 }
