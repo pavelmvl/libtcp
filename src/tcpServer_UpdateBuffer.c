@@ -19,12 +19,12 @@ int UpdateBuffer(struct tcpServer *s, void *newBuffer, size_t newBufferSize) {
   }
     fprintf(
       stderr,
-      "UpdateBuffer idx: %2d, sent: %2d, clientCount: %2d, waitFor: %9d, diff: %011ld\n",
+      "UpdateBuffer idx: %2d, sent: %2d, clientCount: %2d, waitFor: %9d, diff: %3.9f\n",
       s->sentIdx,
       s->sent,
       s->clientCount,
       sleepCount * usleepValue,
-      diff
+      diff/1e9
     );
   //}
   pthread_mutex_lock(&s->mutex);
