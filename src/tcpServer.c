@@ -39,7 +39,7 @@ static void* threadTcpServerWorker(void *arg) {
         size = send(clientSocketFd, s->buffer, s->bufferSize, sendFlag);
         // size = write(clientSocketFd, s->buffer, s->bufferSize);
         if (size != s->bufferSize) {
-          fprintf(stderr, "thread %d incorrect data sent: %ld, should be %ld\n",
+          fprintf(stderr, "thread %d incorrect data sent: %zd, should be %zd\n",
             clientSocketFd,
             size,
             s->bufferSize
